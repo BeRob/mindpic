@@ -1,0 +1,69 @@
+# --- Python bytecode / caches ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.pytype/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.cache/
+
+# --- Virtual environments ---
+.venv/
+venv/
+ENV/
+env/
+.virtualenv/
+
+# --- Packaging / build artifacts ---
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+*.whl
+
+# --- Installer / executables ---
+*.exe
+*.msi
+
+# --- Logs / temp files ---
+*.log
+*.tmp
+*.temp
+
+# --- Local configs / secrets ---
+.env
+.env.*
+*.env
+config.local.*
+settings.local.*
+secrets.*
+*.key
+*.pem
+
+# --- Databases / local data ---
+*.sqlite
+*.sqlite3
+*.db
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- IDEs / editors ---
+.vscode/
+.idea/
+*.iml
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Type checking / language servers ---
+.pyright/
