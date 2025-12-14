@@ -296,6 +296,47 @@ def create_context_menu(
     """
     menu = tk.Menu(root, tearoff=0)
 
+        # Clipboard (arbeitet auf dem Text-Widget)
+    def _has_selection() -> bool:
+        try:
+            return bool(ui.text.tag_ranges("sel"))
+        except Exception:
+            return False
+
+    def _clipboard_has_text() -> bool:
+        try:
+            return bool(root.clipboard_get())
+        except Exception:
+            return False
+
+    def _copy() -> None:
+        try:
+            ui.text.focus_set()
+            ui.text.event_generate("<<Copy>>")
+        except Exception:
+            pass
+
+    def _paste() -> None:
+        try:
+            ui.text.focus_set()
+            ui.text.event_generate("<<Paste>>")
+        except Exception:
+            pass
+
+    def _refresh_clipboard_entries() -> None:
+        try:
+            menu.entryconfig(_copy_idx, state=("normal" if _has_selection() else "disabled"))
+            menu.entryconfig(_paste_idx, state=("normal" if _clipboard_has_text() else "disabled"))
+        except Exception:
+            pass
+
+    menu.add_command(label="Kopieren", command=_copy)
+    _copy_idx = menu.index("end")
+    menu.add_command(label="Einfügen", command=_paste)
+    _paste_idx = menu.index("end")
+    menu.add_separator()
+
+
     # State Vars (werden von app.py initialisiert/gespiegelt)
     ui.alpha_var = tk.DoubleVar(value=float(config.get("window_alpha", 1.0)))
     ui.autohide_var = tk.BooleanVar(value=bool(config.get("auto_hide_on_focus", False)))
@@ -387,6 +428,20 @@ def create_context_menu(
     ui.font_menu = font_menu
     ui.alpha_menu = alpha_menu
 
+    # Bind right click (Fenster UND Text)
+    root.bind("<Button-3>", lambda e: (_refresh_clipboard_entries(), _show_menu_safe(menu, e)))
+
+    def _on_text_right_click(e: tk.Event) -> str:
+        try:
+            ui.text.focus_set()
+            ui.text.mark_set("insert", f"@{int(getattr(e, 'x', 0))},{int(getattr(e, 'y', 0))}")
+        except Exception:
+            pass
+        _refresh_clipboard_entries()
+        _show_menu_safe(menu, e)
+        return "break"
+
+    ui.text.bind("<Button-3>", _on_text_right_click)
 
 def update_font_menu_label(ui: UIRefs, config: dict) -> None:
     """
