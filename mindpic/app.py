@@ -52,6 +52,7 @@ class MindPicApp:
 
         # helpers
         self._dragger = ui_mod.BorderlessDragger()
+        self._resizer = ui_mod.BorderlessResizer()
         self._hotkeys = HotkeyManager()
         self._tray = None  # type: Optional[TrayController]
 
@@ -78,11 +79,7 @@ class MindPicApp:
         self._restore_geometry()
 
         # borderless (must be after geometry restore)
-        ui_mod.apply_borderless(
-            self.root,
-            enabled=bool(self.config.get("borderless", False)),
-            dragger=self._dragger,
-        )
+        ui_mod.apply_borderless(..., dragger=self._dragger, ui=self.ui, resizer=self._resizer)
 
         # load content into Text
         self.ui.text.insert("1.0", load_content())

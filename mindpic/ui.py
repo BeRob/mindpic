@@ -23,7 +23,6 @@ import tkinter.font as tkfont
 
 from .paths import get_app_icon_path
 
-
 # =============================================================================
 # USER OPTIONS (hier kannst du UI-Details anpassen)
 # =============================================================================
@@ -41,6 +40,11 @@ ALPHA_PRESETS: list[tuple[float, str]] = [
 BUTTON_PAD_XY: tuple[int, int] = (8, 2)   # padding=(x,y) für Toolbar-Button
 MAIN_PADDING: tuple[int, int, int, int] = (6, 6, 6, 4)  # l,t,r,b
 
+# Borderless-Resize-Grip (nur aktiv wenn Borderless)
+BORDERLESS_GRIP_SYMBOL: str = "⋰"
+BORDERLESS_GRIP_OFFSET_PX: int = 2
+BORDERLESS_MIN_WIDTH: int = 260
+BORDERLESS_MIN_HEIGHT: int = 180
 
 # =============================================================================
 # Data structures
@@ -63,10 +67,10 @@ class UIRefs:
     alpha_var: tk.DoubleVar | None = None
     autohide_var: tk.BooleanVar | None = None
     borderless_var: tk.BooleanVar | None = None
+    resize_grip: tk.Widget | None = None
 
     # keep references alive
     _app_icon_image: tk.PhotoImage | None = None
-
 
 # =============================================================================
 # Styles / Icons
@@ -146,7 +150,6 @@ def apply_app_icon(root: tk.Tk) -> tk.PhotoImage | None:
     except Exception:
         return None
 
-
 # =============================================================================
 # Widget creation / appearance
 # =============================================================================
@@ -193,14 +196,28 @@ def create_widgets(root: tk.Tk, config: dict, on_save_clicked: Callable[[], None
     )
     save_button.pack(side="right")
 
+    # Resize-Grip (wird nur im Borderless-Mode eingeblendet)
+    resize_grip = tk.Label(
+        root,
+        text=BORDERLESS_GRIP_SYMBOL,
+        cursor="size_nw_se",
+        fg=str(config.get("text_fg", "#ffffff")),
+        bg=str(config.get("text_bg", "#111111")),
+        bd=0,
+        padx=0,
+        pady=0,
+    )
+    resize_grip.place_forget()
+
+
     ui = UIRefs(
         main_frame=main_frame,
         text=text,
         scrollbar=scrollbar,
         save_button=save_button,
+        resize_grip=resize_grip,
     )
     return ui
-
 
 def apply_colors(ui: UIRefs, config: dict) -> None:
     """
@@ -219,12 +236,10 @@ def apply_colors(ui: UIRefs, config: dict) -> None:
     for i, color in enumerate(note_colors):
         ui.text.tag_configure(f"note{i}", background=str(color))
 
-
 def apply_font(ui: UIRefs, config: dict) -> None:
     fam = str(config.get("font_family", "Segoe UI"))
     size = int(config.get("font_size", 10))
     ui.text.configure(font=(fam, size))
-
 
 # =============================================================================
 # Borderless drag helper
@@ -244,22 +259,64 @@ class BorderlessDragger:
         y = int(getattr(event, "y_root", 0)) - self._drag_y
         root.geometry(f"+{x}+{y}")
 
-
-def apply_borderless(root: tk.Tk, enabled: bool, dragger: BorderlessDragger) -> None:
-    """
-    Borderless (overrideredirect) anwenden, und Drag-Binds setzen/entfernen.
-    """
-    geom = root.winfo_geometry()
-    root.overrideredirect(bool(enabled))
-    root.geometry(geom)
+def apply_borderless(
+    root: tk.Tk,
+    enabled: bool,
+    dragger: BorderlessDragger,
+    ui: UIRefs | None = None,
+    resizer: BorderlessResizer | None = None,
+) -> None:
 
     if enabled:
         root.bind("<ButtonPress-1>", lambda e: dragger.start_move(root, e))
         root.bind("<B1-Motion>", lambda e: dragger.on_move(root, e))
+                # Resize-Grip einblenden (und Resizer binden)
+        if ui and ui.resize_grip:
+            ui.resize_grip.place(
+                relx=1.0, rely=1.0, anchor="se",
+                x=-BORDERLESS_GRIP_OFFSET_PX,
+                y=-BORDERLESS_GRIP_OFFSET_PX,
+            )
+            if resizer:
+                resizer.bind(root, ui.resize_grip)
+
     else:
         root.unbind("<ButtonPress-1>")
         root.unbind("<B1-Motion>")
+    if ui and ui.resize_grip:
+        ui.resize_grip.place_forget()
 
+
+class BorderlessResizer:
+    """Minimaler Resizer für Borderless-Mode: Ziehen am Resize-Grip (unten rechts)."""
+
+    def __init__(self, min_w: int = BORDERLESS_MIN_WIDTH, min_h: int = BORDERLESS_MIN_HEIGHT) -> None:
+        self._min_w = int(min_w)
+        self._min_h = int(min_h)
+        self._start_w = self._start_h = 0
+        self._start_x = self._start_y = 0
+        self._mouse_x = self._mouse_y = 0
+
+    def start_resize(self, root: tk.Tk, event: tk.Event) -> str:
+        self._start_w = int(root.winfo_width())
+        self._start_h = int(root.winfo_height())
+        self._start_x = int(root.winfo_x())
+        self._start_y = int(root.winfo_y())
+        self._mouse_x = int(getattr(event, "x_root", 0))
+        self._mouse_y = int(getattr(event, "y_root", 0))
+        return "break"
+
+    def on_resize(self, root: tk.Tk, event: tk.Event) -> str:
+        dx = int(getattr(event, "x_root", 0)) - self._mouse_x
+        dy = int(getattr(event, "y_root", 0)) - self._mouse_y
+        new_w = max(self._min_w, self._start_w + dx)
+        new_h = max(self._min_h, self._start_h + dy)
+        root.geometry(f"{new_w}x{new_h}+{self._start_x}+{self._start_y}")
+        return "break"
+
+    def bind(self, root: tk.Tk, grip: tk.Widget) -> None:
+        grip.bind("<ButtonPress-1>", lambda e: self.start_resize(root, e))
+        grip.bind("<B1-Motion>", lambda e: self.on_resize(root, e))
 
 # =============================================================================
 # Context menu + dialogs
@@ -282,7 +339,6 @@ class MenuCallbacks:
 
     open_manual: Callable[[], None]
     quit_app: Callable[[], None]
-
 
 def create_context_menu(
     root: tk.Tk,
@@ -335,7 +391,6 @@ def create_context_menu(
     menu.add_command(label="Einfügen", command=_paste)
     _paste_idx = menu.index("end")
     menu.add_separator()
-
 
     # State Vars (werden von app.py initialisiert/gespiegelt)
     ui.alpha_var = tk.DoubleVar(value=float(config.get("window_alpha", 1.0)))
@@ -455,7 +510,6 @@ def update_font_menu_label(ui: UIRefs, config: dict) -> None:
     except Exception:
         pass
 
-
 def show_font_dialog(
     root: tk.Tk,
     current_family: str,
@@ -505,7 +559,6 @@ def show_font_dialog(
 
     frm.columnconfigure(1, weight=1)
 
-
 # =============================================================================
 # Internal helpers
 # =============================================================================
@@ -516,7 +569,6 @@ def _show_menu_safe(menu: tk.Menu, event: tk.Event) -> None:
         menu.grab_release()
     except tk.TclError:
         pass
-
 
 def _pick_color_and_call(initial: str, title: str, on_color: Callable[[str], None]) -> None:
     color = colorchooser.askcolor(initialcolor=initial, title=title)[1]
