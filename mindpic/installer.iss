@@ -2,17 +2,17 @@
 ; USER CONFIG (hier anpassen)
 ; =============================================================================
 #define MyAppName "MindPic"
-#define MyAppVersion "1.0.1"
+#define MyAppVersion "1.1.0"
 #define MyAppExeName "MindPic.exe"
 
-#define ProjectDir "D:\Coding\Projekte\DesktopToDo\release\mindpic_v1.0\mindpic"
+#define ProjectDir "D:\Coding\Projekte\mindpic"
 #define DistDir    ProjectDir + "\dist\MindPic"
 
-#define OutputDir  ProjectDir + "\dist"
+#define OutputDir  ProjectDir + "\mindpic\dist"
 #define SetupName  "MindPic_Setup"
 
 ; Optional: Setup-Icon (für die Installer-EXE)
-#define SetupIcon  ProjectDir + "\assets\mindpic.ico"
+#define SetupIcon  ProjectDir + "\mindpic\assets\mindpic.ico"
 ; =============================================================================
 
 [Setup]

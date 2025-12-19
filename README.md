@@ -2,7 +2,7 @@
 
 Eine schlanke Windows Desktop-Notiz-App mit Zeitstempel-Organisation und farbigen Blöcken.
 
-![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
 

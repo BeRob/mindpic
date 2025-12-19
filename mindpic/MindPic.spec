@@ -6,7 +6,7 @@ import os
 # USER CONFIG (hier anpassen)
 # =============================================================================
 APP_NAME    = "MindPic"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.0"
 
 # PyInstaller stellt SPECPATH bereit: Ordner, in dem die .spec liegt
 PROJECT_DIR  = SPECPATH
