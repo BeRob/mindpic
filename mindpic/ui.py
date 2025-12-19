@@ -281,6 +281,11 @@ def apply_borderless(
     resizer: BorderlessResizer | None = None,
 ) -> None:
 
+    try:
+        root.overrideredirect(enabled)
+    except Exception:
+        pass
+
     if enabled:
         dragger.bind(root)
         # Resize-Grip einblenden (und Resizer binden)

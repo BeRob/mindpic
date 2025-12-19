@@ -11,12 +11,14 @@ Hinweis:
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from typing import Iterable
 
 
 # Typische Timestamp-Formate (du kannst das erweitern)
-# Beispiel: "2025-12-12 18:44" oder "12.12.2025 18:44" oder "18:44"
+# Beispiel: "19-12-2025 18:44" oder "2025-12-12 18:44" oder "12.12.2025 18:44" oder "18:44"
 _TS_PATTERNS = [
+    r"^\s*\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}(\:\d{2})?\s*",
     r"^\s*\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}(\:\d{2})?\s*",
     r"^\s*\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}(\:\d{2})?\s*",
     r"^\s*\d{2}:\d{2}(\:\d{2})?\s*",
@@ -52,3 +54,10 @@ def pick_color_index(block_index: int, color_count: int) -> int:
     if color_count <= 0:
         return 0
     return block_index % color_count
+
+
+def generate_timestamp() -> str:
+    """
+    Generiert einen Zeitstempel im Format 'DD-MM-YYYY HH:MM'.
+    """
+    return datetime.now().strftime("%d-%m-%Y %H:%M")

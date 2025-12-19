@@ -28,7 +28,7 @@ from . import settings
 from .config_io import load_config, save_config
 from .persistence import load_content, save_content, load_window_geometry, save_window_geometry, WindowGeometry
 from .paths import get_log_path, get_manual_path
-from .colorize import iter_blocks, pick_color_index
+from .colorize import iter_blocks, pick_color_index, generate_timestamp
 from .hotkeys import HotkeyManager
 from .tray import TrayCallbacks, TrayController
 from . import ui as ui_mod
@@ -164,6 +164,9 @@ class MindPicApp:
         self._schedule_config_save()
 
     def save_all(self) -> None:
+        # insert timestamp before saving
+        self._insert_timestamp()
+
         # content
         text = self.ui.text.get("1.0", "end-1c")
         save_content(text)
@@ -313,6 +316,40 @@ class MindPicApp:
             save_window_geometry(g)
         except Exception:
             pass
+
+    # -------------------------------------------------------------------------
+    # Internal: timestamp insertion
+    # -------------------------------------------------------------------------
+
+    def _insert_timestamp(self, _event=None) -> str:
+        """
+        Fügt einen Zeitstempel an der aktuellen Cursor-Position ein.
+        Wenn am Zeilenanfang: fügt nur Zeitstempel + Leerzeichen ein
+        Wenn nicht am Zeilenanfang: neue Zeile + Zeitstempel
+        """
+        try:
+            timestamp = generate_timestamp()
+
+            # Cursor-Position holen
+            cursor_pos = self.ui.text.index("insert")
+            line, col = cursor_pos.split(".")
+            col = int(col)
+
+            # Prüfen ob am Zeilenanfang (col == 0)
+            if col == 0:
+                # Am Anfang der Zeile: einfach Zeitstempel + Leerzeichen einfügen
+                self.ui.text.insert("insert", f"{timestamp} ")
+            else:
+                # Nicht am Anfang: neue Zeile + Zeitstempel
+                self.ui.text.insert("insert", f"\n{timestamp} ")
+
+            # Recolorize nach Einfügen
+            self._recolorize()
+
+        except Exception as e:
+            logger.error(f"Failed to insert timestamp: {e}")
+
+        return "break"  # Verhindert weitere Event-Propagation
 
     # -------------------------------------------------------------------------
     # Internal: recolorize blocks
