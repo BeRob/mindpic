@@ -1,323 +1,241 @@
-# Bedienungsanleitung – MindPic Desktop-Notiz-App
+# MindPic
 
-Diese Anleitung beschreibt die Bedienung der Anwendung **MindPic** als installierte Windows-Desktop-App (EXE). Es geht ausschließlich um die Nutzung der Oberfläche, nicht um Programmierung oder Code.
+Eine schlanke Windows Desktop-Notiz-App mit Zeitstempel-Organisation und farbigen Blöcken.
 
----
+![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)
+![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
+![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
 
-## 1. Zweck der Anwendung
+## Features
 
-MindPic ist eine schlanke Desktop-Notiz-App, die dauerhaft am Bildschirmrand „kleben“ kann. Sie eignet sich für:
+- Always-on-Top mit automatischem Andocken an Bildschirmränder
+- Zeitstempel-basierte Einträge mit automatischer Farbkodierung
+- Auto-Save für Inhalte und Einstellungen
+- Borderless Mode mit Drag & Resize
+- Globaler Hotkey (F9) zum Ein-/Ausblenden
+- System Tray Integration
+- Anpassbare Schriftart, Farben und Transparenz
+- Optional: Auto-Hide bei Fokusverlust
 
-- schnelle Gedanken und ToDo-Listen  
-- dauerhafte Notizen direkt auf dem Desktop  
-- Zeitprotokolle mit Zeitstempel je Eintrag  
+## Quick Start
 
-Alle Texte und Einstellungen werden automatisch gespeichert und beim nächsten Start wiederhergestellt.
+### Für Nutzer
 
----
+1. Download der aktuellen Version von [Releases](https://github.com/BeRob/mindpic/releases)
+2. `MindPic_Setup.exe` ausführen und installieren
+3. MindPic über das Startmenü starten
+4. Mit F9 jederzeit ein-/ausblenden
 
-## 2. Start & Beenden
+### Für Entwickler
 
-### Starten
+```bash
+git clone https://github.com/BeRob/mindpic.git
+cd mindpic
+pip install -r mindpic/requirements.txt
+python -m mindpic
+```
 
-- Start über das Startmenü, Desktop-Icon oder eine Verknüpfung (je nach Installation).
-- Beim Start öffnet sich ein kleines Notizfenster mit dunklem Hintergrund und einem **„Save“**-Button unten rechts.
+## Installation
 
-### Beenden
+**Windows Installer:** Download von `MindPic_Setup.exe` und Installation über den Wizard.
 
-- Klicken Sie im Fenster rechts oben auf das **Schließen-Symbol (X)**,  
-  **oder**
-- wählen Sie im Kontextmenü (Rechtsklick im Fenster) **„Beenden“**,  
-  **oder**
-- wählen Sie im Tray-Menü (Icon in der Taskleiste) **„Beenden“**.
+**Portable:** ZIP herunterladen, entpacken und `MindPic.exe` starten.
 
-Beim Beenden werden Notizen und Fensterposition noch einmal gespeichert.
+## Bedienung
 
----
+### Grundfunktionen
 
-## 3. Grundbedienung im Notizfenster
+Einfach ins Textfeld klicken und losschreiben. Der Inhalt wird automatisch gespeichert.
 
-### 3.1 Schreiben & Bearbeiten
+**Zeitstempel hinzufügen:**
+1. Notiz schreiben
+2. Save-Button (unten rechts) klicken
+3. Zeitstempel `[DD-MM-YYYY HH:MM]` wird eingefügt
+4. Einträge werden automatisch farbig markiert
 
-- Klicken Sie in den Textbereich und tippen Sie Ihre Notizen.  
-- Umbrüche mit **Enter**.  
-- Der Text verhält sich wie ein einfaches Notizfeld (Zeilenumbruch ist aktiv).
+**Sichtbarkeit:**
+- F9 drücken (funktioniert systemweit)
+- Rechtsklick → "Fenster ein-/ausblenden"
+- System Tray Icon verwenden
 
-### 3.2 Scrollen
+### Fenster
 
-- Wenn der Text länger wird, erscheint rechts eine schlanke vertikale Scrollleiste.  
-- Scrollen mit:
-  - Mausrad  
-  - Klick auf die Scrollleiste  
-  - Ziehen des Scrollbalkens  
+**Verschieben:**
+- Normal: Titelleiste ziehen
+- Borderless: Irgendwo ins Fenster klicken und ziehen
 
-### 3.3 Automatisches Speichern
+**Größe ändern:** An den Fensterrändern ziehen (Minimum: 420×220px)
 
-- Während Sie schreiben, wird der Inhalt nach kurzer Pause automatisch gespeichert.  
-- Es ist nicht nötig, ständig auf **„Save“** zu klicken, um die Notizen zu sichern – der Button hat eine besondere Funktion (siehe unten).
+**Snap:** Fenster nah an einen Bildschirmrand ziehen, es dockt automatisch an.
 
----
+### Kontextmenü (Rechtsklick)
 
-## 4. Einträge mit Zeitstempel & farbige Blöcke
+- **Farben** - Text, Hintergrund und Eintragsfarben anpassen
+- **Schrift** - Font und Größe wählen
+- **Randlos (Borderless)** - Fensterrahmen ein/aus
+- **Transparenz** - 50% bis 100%
+- **Auto-Hide bei Fokusverlust** - Automatisches Ausblenden
+- **Immer im Vordergrund umschalten** - Always-on-top
+- **Beenden** - App schließen
 
-### 4.1 „Save“-Button (Eintrag abschließen)
+## Development
 
-Beim Klicken auf **„Save“** passiert folgendes:
+### Struktur
 
-1. Falls die aktuelle Zeile nicht mit einem Zeilenumbruch endet, wird ein Zeilenumbruch eingefügt.  
-2. In einer **neuen Zeile** wird automatisch ein **Zeitstempel** eingefügt, z. B.:  
-   `[10-12-2025 21:37]`  
-3. Der gesamte Text wird gespeichert.  
-4. Die Einträge werden neu eingefärbt.
+```
+mindpic/
+├── app.py           # Hauptanwendung (MindPicApp)
+├── ui.py            # UI-Komponenten, Styles, Kontextmenü
+├── settings.py      # Zentrale Konfiguration
+├── persistence.py   # Speichern & Laden von Inhalt/Geometrie
+├── config_io.py     # JSON Config mit Deep Merge
+├── colorize.py      # Zeitstempel-Erkennung & Farbblöcke
+├── hotkeys.py       # Globale Hotkeys
+├── tray.py          # System Tray
+├── paths.py         # Pfadauflösung (Dev vs. Frozen)
+├── __main__.py      # Entry Point mit Logging
+└── run_mindpic.py   # PyInstaller Launcher
+```
 
-Damit eignet sich der Button ideal, um einen Eintrag abzuschließen.
+### Setup
 
-### 4.2 Automatische Einfärbung
+```bash
+cd D:\Coding\Projekte\mindpic
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r mindpic/requirements.txt
+python -m mindpic
+```
+
+### Build
+
+**Executable erstellen:**
+```bash
+cd mindpic
+pyinstaller MindPic.spec
+# Output: dist/MindPic/MindPic.exe
+```
+
+**Installer bauen:**
+
+[Inno Setup](https://jrsoftware.org/isinfo.php) muss installiert sein.
+
+```bash
+# installer.iss öffnen und ProjectDir (Zeile 8) anpassen
+iscc mindpic/installer.iss
+# Output: mindpic/dist/MindPic_Setup.exe
+```
+
+### Testing
+
+```bash
+# Syntax Check
+python -m py_compile mindpic/app.py mindpic/ui.py
 
-- Die Anwendung teilt den Text automatisch in **Blöcke**:
-  - Ein Block beginnt nach einem Zeitstempel
-  - und endet am nächsten Zeitstempel (inklusive der Zeitstempel-Zeile).
-- Jeder Block bekommt eine **eigene Hintergrundfarbe**.
-- Die Farben rotieren durch mehrere vordefinierte Töne.
+# Import Check
+python -c "import mindpic; print('OK')"
 
-So sind Einträge optisch voneinander getrennt und leichter zu überblicken.
-
----
-
-## 5. Fensterposition, Größe & Andocken
-
-### 5.1 Größe ändern
-
-- Maus an den Fensterrand bewegen, bis der Größen-Cursor erscheint.  
-- Mit gedrückter linker Maustaste ziehen.  
-- Es gibt eine minimale Fenstergröße.
-
-### 5.2 Fenster verschieben
-
-- Im **Normalmodus** (mit Rand und Titelzeile):  
-  - Klick in die Titelzeile und Ziehen.
-- Im **Randlos-Modus** (siehe Kapitel 7.3):  
-  - Klick irgendwo ins Fenster und Ziehen.
-
-### 5.3 Andocken („Snap to Edges“)
-
-Beim Loslassen der Maus nach dem Ziehen:
-
-- Ist das Fenster nahe am Bildschirmrand, dockt es bündig an:
-  - links  
-  - rechts  
-  - oben  
-  - unten  
-
----
-
-## 6. Ein- und Ausblenden (Hotkey & Auto-Hide)
-
-### 6.1 Sichtbarkeit umschalten (F9)
-
-Die App kann über eine Tastenkombination ein- und ausgeblendet werden.
-
-- **Globaler Hotkey (Standard):** **F9**
-  - Ist MindPic sichtbar → es wird **ausgeblendet**.  
-  - Ist MindPic ausgeblendet → es wird **eingeblendet** und fokussiert.
-- Falls der globale Hotkey auf Ihrem System nicht funktioniert, kann F9 zumindest innerhalb des Fensters verwendet werden, solange der Fokus im MindPic-Fenster liegt.
-
-### 6.2 Auto-Hide bei Fokusverlust
-
-Wenn **„Auto-Hide bei Fokusverlust“** aktiviert ist:
-
-- Sobald MindPic den Fokus verliert (z. B. Klick in ein anderes Programm),  
-- prüft die App kurz danach, ob sie immer noch keinen Fokus hat,  
-- und blendet sich dann **automatisch aus**.
-
-Zum Wiederherstellen:
-
-- **F9** drücken oder  
-- Icon im System-Tray verwenden (siehe Kapitel 8).
-
----
-
-## 7. Kontextmenü im Fenster (Rechtsklick)
-
-Ein Rechtsklick **im Textbereich** oder auf den Hintergrund des Fensters öffnet das **Kontextmenü** von MindPic.
-
-### 7.1 Farben
-
-**Menüpfad:** `Rechtsklick → Farben`
-
-- **Textfarbe…**  
-  Öffnet einen Farbdialog, mit dem Sie die Schriftfarbe der Notizen ändern.
-
-- **Hintergrund…**  
-  Öffnet einen Farbdialog für die Hintergrundfarbe des Notizfeldes.
-
-- **Eintragsfarbe 1… / 2… / …**  
-  Für jede Eintragsfarbe gibt es einen Menüpunkt.  
-  - Wählen Sie eine Farbe, um die jeweilige Blockfarbe zu ändern.  
-  - Nach Änderung werden die Einträge automatisch neu eingefärbt.
-
-Alle Farbanpassungen werden gespeichert und beim nächsten Start wieder verwendet.
-
-### 7.2 Schrift
-
-**Menüpfad:** `Rechtsklick → Schrift`
-
-- **„Aktuell: <Schriftname> <Größe>“**  
-  Anzeige der aktuell verwendeten Schriftart und -größe (nicht anklickbar).
-
-- **„Schrift wählen…“**  
-  Öffnet ein kleines Einstellfenster:
-  - oben: Dropdown-Liste mit allen verfügbaren System-Schriftarten  
-  - unten: Eingabe der Schriftgröße (z. B. 9, 10, 11 …)  
-  - **OK**: überträgt die Auswahl auf das Notizfeld und speichert die Einstellung  
-  - **Abbrechen**: schließt die Auswahl ohne Änderung
-
-### 7.3 Randlos (Borderless)
-
-**Menüeintrag:** `Randlos (Borderless)` (Checkbox)
-
-- **Aktiviert (Häkchen gesetzt):**
-  - Das Fenster wird ohne Standard-Titelzeile und ohne Rahmen dargestellt.
-  - Das Fenster lässt sich nun durch **Linksklick und Ziehen irgendwo im Fenster** verschieben.
-- **Deaktiviert (kein Häkchen):**
-  - Das Fenster erhält wieder den normalen Windows-Rahmen mit Titelzeile.
-
-### 7.4 Transparenz
-
-**Menüpfad:** `Rechtsklick → Transparenz`
-
-Es stehen feste Stufen zur Auswahl, z. B.:
-
-- 50 %  
-- 70 %  
-- 85 %  
-- 95 %  
-- 100 %  
-
-Die aktuell aktive Stufe ist im Menü markiert.
-
-Die Transparenz betrifft das gesamte Fenster inklusive Text und ist ideal, um MindPic „über“ anderen Fenstern schweben zu lassen.
-
-### 7.5 Auto-Hide bei Fokusverlust
-
-**Menüeintrag:** `Auto-Hide bei Fokusverlust` (Checkbox)
-
-- **Aktiviert (Häkchen):**  
-  MindPic blendet sich automatisch aus, wenn der Fokus auf ein anderes Programm wechselt.
-
-- **Deaktiviert (kein Häkchen):**  
-  Das Fenster bleibt sichtbar, bis Sie es manuell ausblenden (z. B. mit F9 oder über das Tray-Menü).
-
-### 7.6 „Immer im Vordergrund umschalten“
-
-**Menüeintrag:** `Immer im Vordergrund umschalten`
-
-- Dieser Eintrag wirkt als **Schalter**:
-  - Ist MindPic bisher normal im Fensterstapel → wird zu „Always on top“.  
-  - Ist es bereits „Always on top“ → wird wieder in den normalen Fenstermodus zurückversetzt.
-
-### 7.7 „Fenster ein-/ausblenden“
-
-**Menüeintrag:** `Fenster ein-/ausblenden`
-
-- Hat die gleiche Wirkung wie **F9**:
-  - Ist das Fenster sichtbar → wird ausgeblendet.  
-  - Ist es ausgeblendet → wird eingeblendet.
-
-### 7.8 „Handbuch öffnen“
-
-**Menüeintrag:** `Handbuch öffnen`
-
-- Öffnet das Benutzerhandbuch (diese Anleitung) als PDF in der Standardanwendung für PDF-Dateien Ihres Systems.
-
-### 7.9 „Beenden“
-
-**Menüeintrag:** `Beenden`
-
-- Speichert Inhalt und Fensterkonfiguration.  
-- Beendet anschließend die Anwendung vollständig.
-
----
-
-## 8. Tray-Symbol (System-Tray)
-
-Nach dem Start legt MindPic ein Icon im **Infobereich der Taskleiste** (System-Tray) an, meist rechts unten neben der Uhr (ggf. im ausgeklappten Bereich).
-
-### 8.1 Tray-Menü öffnen
-
-- Rechtsklick auf das MindPic-Icon im System-Tray.
-
-Das Menü enthält:
-
-1. **„Tafel ein/aus“**  
-   - Schaltet das Hauptfenster ein- und aus (wie F9 bzw. „Fenster ein-/ausblenden“ im Kontextmenü).
-
-2. **„Auto-Hide bei Fokusverlust“** (mit Häkchen)  
-   - Aktiviert/deaktiviert dieselbe Funktion wie im Fenster-Kontextmenü.  
-   - Der aktuelle Zustand wird im Tray-Menü angezeigt.
-
-3. **„Beenden“**  
-   - Beendet die Anwendung (mit Speichern von Inhalt und Geometrie).
-
-### 8.2 Typische Nutzung
-
-- MindPic beim Systemstart öffnen (z. B. über Autostart/Verknüpfung).  
-- Hauptfenster ausblenden.  
-- Bei Bedarf:
-  - über **F9** einblenden → Notiz schreiben → **„Save“** drücken,  
-  - Fenster wieder ausblenden (F9 oder Tray-Menü).
-
-So bleibt die App unauffällig im Hintergrund, aber jederzeit griffbereit.
-
----
-
-## 9. Verhalten beim Neustart
-
-Beim erneuten Start von MindPic werden automatisch wiederhergestellt:
-
-- alle Notizen  
-- Fensterposition und -größe  
-- Farben, Schriftart, Schriftgröße  
-- Transparenz  
-- Randlos-Einstellung  
-- Always-on-top-Status  
-- Auto-Hide-Einstellung  
-
-Die App startet also so, wie Sie sie beim letzten Beenden verlassen haben.
-
----
-
-## 10. Kurzübersicht – wichtigste Funktionen
-
-**Text & Einträge**
-
-- Schreiben: direkt ins Hauptfenster.  
-- Eintrag abschließen + Zeitstempel: **„Save“**-Button.  
-- Farbliche Trennung von Einträgen: automatisch nach Zeitstempeln.
-
-**Sichtbarkeit**
-
-- Ein-/Ausblenden: **F9** oder
-  - Kontextmenü → „Fenster ein-/ausblenden“  
-  - Tray-Menü → „Tafel ein/aus“  
-
-**Fenster**
-
-- Verschieben: Titelzeile (normal) oder Fenster ziehen (borderless).  
-- Andocken: Fenster an Bildschirmrand ziehen → beim Loslassen wird eingerastet.  
-- Größe ändern: an den Fensterrändern ziehen.
-
-**Optionen (Rechtsklick im Fenster)**
-
-- Farben: Text, Hintergrund, Eintragsfarben.  
-- Schrift: Schriftart & Schriftgröße.  
-- Transparenz: 50–100 %.  
-- Auto-Hide: bei Fokusverlust ein/aus.  
-- Randlos: Borderless-Ansicht ein/aus.  
-- Immer im Vordergrund: umschalten.  
-- Handbuch öffnen: PDF-Benutzerhandbuch.  
-- Beenden: App schließen.
-
----
-
-MindPic ist damit als kleine, dauerhafte Desktop-Tafel nutzbar, die sich exakt an Ihre Arbeitsweise anpasst.
+# Debug Logging
+# settings.py: LOG_LEVEL = "DEBUG"
+python -m mindpic
+# siehe mindpic.log
+```
+
+## Konfiguration
+
+Alle Einstellungen sind in `settings.py` zentralisiert:
+
+```python
+# Verhalten
+DEFAULT_ALWAYS_ON_TOP = True
+DEFAULT_BORDERLESS = False
+DEFAULT_WINDOW_ALPHA = 0.92
+DEFAULT_SNAP_DISTANCE = 16
+
+# Hotkeys
+LOCAL_TOGGLE_KEY = "<F9>"
+GLOBAL_TOGGLE_HOTKEY = "f9"
+
+# Features
+ENABLE_TRAY = True
+ENABLE_GLOBAL_HOTKEYS = True
+DEFAULT_AUTO_HIDE_ON_FOCUS_LOST = False
+AUTO_HIDE_DELAY_MS = 650
+
+# UI
+DEFAULT_FONT_FAMILY = "Dosis"
+DEFAULT_FONT_SIZE = 9
+```
+
+Benutzereinstellungen werden in `config.json` und die Fenstergeometrie in `window_geometry.json` gespeichert.
+
+## Architektur
+
+**State Management:**
+- `MindPicApp` hält den Runtime State
+- Config wird beim Start aus `config_io.load_config()` geladen (Merge von Defaults und gespeicherten Werten)
+- Fenstergeometrie wird separat persistiert
+
+**Debouncing & Throttling:**
+- Config-Saves werden um 2s verzögert (`_schedule_config_save()`)
+- Recolorize wird nach 350ms ausgeführt
+- Window Snap ist auf max. 10x/sec gedrosselt
+- Font-Liste wird gecacht
+- Alle Pfadfunktionen nutzen `@lru_cache`
+
+**Event Flow:**
+- UI Callbacks aktualisieren die Config und rufen `_schedule_config_save()`
+- Text-Änderungen triggern `<<Modified>>` → debounced recolorize
+- Configure Events triggern throttled Snap Checks
+- Auto-Hide nutzt Focus Events mit verzögerten Jobs
+
+**Path Resolution:**
+- `paths.py` erkennt ob frozen (`sys.frozen`) und löst Pfade entsprechend auf
+- DEV: nutzt `settings.DEV_PROJECT_DIR`
+- Frozen: nutzt `_MEIPASS` für Assets, Exe-Verzeichnis für Daten
+
+## Dependencies
+
+**Core:**
+- `tkinter` (inkl. Python)
+- `keyboard` (optional, für globale Hotkeys)
+- `pystray` (optional, für System Tray)
+- `pillow` (optional, für Tray Icon)
+
+**Build:**
+- `pyinstaller`
+- Inno Setup
+
+Alle Python-Dependencies stehen in `requirements.txt`.
+
+## Troubleshooting
+
+**F9 funktioniert nicht:**
+- Prüfen ob andere App F9 belegt
+- Als Admin starten
+- `pip install keyboard` ausführen
+
+**Fensterposition wird nicht gespeichert:**
+- `window_geometry.json` im App-Verzeichnis prüfen
+- Schreibrechte für App-Ordner überprüfen
+
+**Tray Icon fehlt:**
+- `pip install pystray pillow`
+- In `settings.py`: `ENABLE_TRAY = True`
+
+**Farben ändern sich nicht:**
+- Zeitstempel müssen Format `[DD-MM-YYYY HH:MM]` haben
+- Save-Button klicken um Recolorize zu triggern
+
+## License
+
+MIT License - siehe [LICENSE](LICENSE) Datei.
+
+## Roadmap
+
+- Linux/macOS Support
+- Export nach Markdown/HTML
+- Suchfunktion
+- Notiz-Templates
+- Cloud Sync
+- Mehrere Notizseiten/Tabs
