@@ -18,8 +18,11 @@ from pathlib import Path
 
 APP_NAME: str = "MindPic"
 
-# Projektbasis (nur für DEV; in der EXE wird automatisch der EXE-Ordner genutzt)
-DEV_PROJECT_DIR: str = r"D:\Coding\Projekte\MindPic"
+# Projektbasis (nur für DEV; in der EXE wird automatisch der EXE-Ordner genutzt).
+# Standard: Repository-Wurzel, damit Entwicklung auf jedem Rechner ohne
+# hart codierten Benutzerpfad funktioniert.
+DEV_PROJECT_PATH: Path = Path(__file__).resolve().parents[1]
+DEV_PROJECT_DIR: str = str(DEV_PROJECT_PATH)
 
 # Optional: Speicherort hart überschreiben (z.B. Netzlaufwerk).
 # Wenn None: in EXE -> Ordner der EXE, in DEV -> DEV_PROJECT_DIR
@@ -134,4 +137,5 @@ DEFAULT_CONFIG: dict = {
 # Convenience (nur intern)
 # =============================================================================
 
-DEV_PROJECT_PATH: Path = Path(DEV_PROJECT_DIR)
+# DEV_PROJECT_PATH wird oben kanonisch gesetzt; DEV_PROJECT_DIR bleibt als
+# String-Alias für bestehende Konfigurationen erhalten.

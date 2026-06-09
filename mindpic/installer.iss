@@ -5,8 +5,8 @@
 #define MyAppVersion "1.1.0"
 #define MyAppExeName "MindPic.exe"
 
-#define ProjectDir "D:\Coding\Projekte\mindpic"
-#define DistDir    ProjectDir + "\dist\MindPic"
+#define ProjectDir AddBackslash(SourcePath) + ".."
+#define DistDir    ProjectDir + "\mindpic\dist\MindPic"
 
 #define OutputDir  ProjectDir + "\mindpic\dist"
 #define SetupName  "MindPic_Setup"

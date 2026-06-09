@@ -50,8 +50,11 @@ Einfach ins Textfeld klicken und losschreiben. Der Inhalt wird automatisch gespe
 **Zeitstempel hinzufügen:**
 1. Notiz schreiben
 2. Save-Button (unten rechts) klicken
-3. Zeitstempel `[DD-MM-YYYY HH:MM]` wird eingefügt
+3. Zeitstempel `DD-MM-YYYY HH:MM` wird eingefügt
 4. Einträge werden automatisch farbig markiert
+
+Der automatische Hintergrund-Save speichert nur den aktuellen Inhalt. Er fügt
+keine Zeitstempel ein. Auch beim Beenden wird nur still gespeichert.
 
 **Sichtbarkeit:**
 - F9 drücken (funktioniert systemweit)
@@ -100,7 +103,7 @@ mindpic/
 ### Setup
 
 ```bash
-cd D:\Coding\Projekte\mindpic
+cd mindpic
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r mindpic/requirements.txt
@@ -121,7 +124,6 @@ pyinstaller MindPic.spec
 [Inno Setup](https://jrsoftware.org/isinfo.php) muss installiert sein.
 
 ```bash
-# installer.iss öffnen und ProjectDir (Zeile 8) anpassen
 iscc mindpic/installer.iss
 # Output: mindpic/dist/MindPic_Setup.exe
 ```
@@ -129,8 +131,11 @@ iscc mindpic/installer.iss
 ### Testing
 
 ```bash
-# Syntax Check
-python -m py_compile mindpic/app.py mindpic/ui.py
+# Regressionstests
+python -m unittest discover -s tests -v
+
+# Syntax Check aller Python-Dateien
+python -m compileall -q mindpic
 
 # Import Check
 python -c "import mindpic; print('OK')"
@@ -164,10 +169,15 @@ AUTO_HIDE_DELAY_MS = 650
 
 # UI
 DEFAULT_FONT_FAMILY = "Dosis"
-DEFAULT_FONT_SIZE = 9
+DEFAULT_FONT_SIZE = 12
 ```
 
-Benutzereinstellungen werden in `config.json` und die Fenstergeometrie in `window_geometry.json` gespeichert.
+Benutzereinstellungen werden in `config.json`, der Notizinhalt in `content.txt`
+und die Fenstergeometrie in `window_geometry.json` gespeichert.
+
+Im Entwicklerbetrieb liegt der Standard-Speicherort in der Repository-Wurzel. In
+der gebauten EXE liegt er neben `MindPic.exe`. Falls ein anderer Speicherort
+gewünscht ist, kann `SAVE_DIR_OVERRIDE` in `settings.py` gesetzt werden.
 
 ## Architektur
 
@@ -191,7 +201,7 @@ Benutzereinstellungen werden in `config.json` und die Fenstergeometrie in `windo
 
 **Path Resolution:**
 - `paths.py` erkennt ob frozen (`sys.frozen`) und löst Pfade entsprechend auf
-- DEV: nutzt `settings.DEV_PROJECT_DIR`
+- DEV: nutzt die Repository-Wurzel aus `settings.DEV_PROJECT_PATH`
 - Frozen: nutzt `_MEIPASS` für Assets, Exe-Verzeichnis für Daten
 
 ## Dependencies
@@ -224,8 +234,8 @@ Alle Python-Dependencies stehen in `requirements.txt`.
 - In `settings.py`: `ENABLE_TRAY = True`
 
 **Farben ändern sich nicht:**
-- Zeitstempel müssen Format `[DD-MM-YYYY HH:MM]` haben
-- Save-Button klicken um Recolorize zu triggern
+- Zeitstempel müssen Format `DD-MM-YYYY HH:MM` haben, z. B. `09-06-2026 14:39`
+- Save-Button klicken oder Text kurz bearbeiten, um Recolorize zu triggern
 
 ## License
 

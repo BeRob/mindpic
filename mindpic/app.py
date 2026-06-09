@@ -70,7 +70,7 @@ class MindPicApp:
         # icon + styles + widgets
         ui_mod.setup_styles(self.root, self.config)
         self._icon_ref = ui_mod.apply_app_icon(self.root)
-        self.ui = ui_mod.create_widgets(self.root, self.config, on_save_clicked=self.save_all)
+        self.ui = ui_mod.create_widgets(self.root, self.config, on_save_clicked=self.save_with_timestamp)
 
         ui_mod.apply_colors(self.ui, self.config)
         ui_mod.apply_font(self.ui, self.config)
@@ -163,20 +163,34 @@ class MindPicApp:
         self._apply_topmost(new_val)
         self._schedule_config_save()
 
-    def save_all(self) -> None:
-        # insert timestamp before saving
-        self._insert_timestamp()
+    def save_current_state(self, *, recolorize: bool = False) -> None:
+        """
+        Speichert Inhalt, Konfiguration und Fenstergeometrie ohne Seiteneffekte.
 
-        # content
+        Diese Methode wird für Autosave und Beenden verwendet. Sie fügt bewusst
+        keinen Zeitstempel ein; Zeitstempel sind eine explizite Nutzeraktion über
+        den Save-Button.
+        """
         text = self.ui.text.get("1.0", "end-1c")
         save_content(text)
-
-        # config + geometry
         save_config(self.config)
         self._save_geometry()
 
-        # recolorize (keeps things consistent)
-        self._recolorize()
+        if recolorize:
+            self._recolorize()
+
+    def save_with_timestamp(self) -> None:
+        """
+        Expliziter Save-Button: Zeitstempel einfügen und danach speichern.
+        """
+        self._insert_timestamp()
+        self.save_current_state(recolorize=False)
+
+    def save_all(self) -> None:
+        """
+        Kompatibilitätsalias für ältere Callbacks: entspricht dem Save-Button.
+        """
+        self.save_with_timestamp()
 
     def open_manual(self) -> None:
         p = get_manual_path()
@@ -203,7 +217,7 @@ class MindPicApp:
         logger.info("Shutting down MindPicApp")
         # save before exit
         try:
-            self.save_all()
+            self.save_current_state()
         except Exception as e:
             logger.error(f"Failed to save on exit: {e}")
 
@@ -242,7 +256,13 @@ class MindPicApp:
 
     def _menu_set_borderless(self, enabled: bool) -> None:
         self.config["borderless"] = bool(enabled)
-        ui_mod.apply_borderless(self.root, enabled=bool(enabled), dragger=self._dragger)
+        ui_mod.apply_borderless(
+            self.root,
+            enabled=bool(enabled),
+            dragger=self._dragger,
+            ui=self.ui,
+            resizer=self._resizer,
+        )
         self._schedule_config_save()
 
     def _menu_set_text_color(self, color: str) -> None:
@@ -525,7 +545,7 @@ class MindPicApp:
         # Nur speichern wenn kürzlich editiert wurde (reduziert unnötige Writes)
         if self._last_user_edit_ts and (time.time() - self._last_user_edit_ts) < 5.0:
             try:
-                self.save_all()
+                self.save_current_state()
             except Exception:
                 pass
 

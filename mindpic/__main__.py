@@ -15,6 +15,10 @@ from .paths import get_log_path
 def setup_logging() -> None:
     """Configure logging based on settings."""
     log_path = get_log_path()
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
 
     # Get log level from settings
     level_name = settings.LOG_LEVEL.upper()
