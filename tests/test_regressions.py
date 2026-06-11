@@ -1,10 +1,13 @@
 import unittest
 from unittest.mock import Mock, patch
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from mindpic import settings
 from mindpic.colorize import generate_timestamp, is_timestamp_line, iter_blocks
 from mindpic.app import MindPicApp
+from mindpic.persistence import save_content
+from mindpic.note_store import ensure_topics, topic_to_filename, unique_topic_name
 
 
 class FakeText:
@@ -30,8 +33,11 @@ class SaveBehaviorTests(unittest.TestCase):
     def make_app(self):
         app = MindPicApp.__new__(MindPicApp)
         app.config = {"example": True}
+        app._current_topic = settings.DEFAULT_ACTIVE_TOPIC
+        app._topics = [settings.DEFAULT_ACTIVE_TOPIC]
         app.ui = Mock()
         app.ui.text = FakeText("note")
+        app._mark_saved = Mock()
         app._save_geometry = Mock()
         app._recolorize = Mock()
         return app
@@ -44,7 +50,7 @@ class SaveBehaviorTests(unittest.TestCase):
         app.save_current_state()
 
         self.assertEqual(app.ui.text.inserts, [])
-        save_content.assert_called_once_with("note")
+        save_content.assert_called_once_with("note", topic=settings.DEFAULT_ACTIVE_TOPIC)
         save_config.assert_called_once_with(app.config)
         app._save_geometry.assert_called_once()
         app._recolorize.assert_not_called()
@@ -109,12 +115,39 @@ class BorderlessMenuTests(unittest.TestCase):
         app._schedule_config_save.assert_called_once()
 
 
+class PersistenceSafetyTests(unittest.TestCase):
+    def test_topic_names_are_normalized_and_unique(self):
+        self.assertEqual(topic_to_filename("Arbeit/Privat"), "Arbeit_Privat.txt")
+        self.assertEqual(unique_topic_name("Ideen", ["Ideen"]), "Ideen 2")
+        self.assertEqual(ensure_topics([]), [settings.DEFAULT_ACTIVE_TOPIC])
+
+    def test_save_content_is_atomic_and_keeps_rotated_backups(self):
+        with TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            note_path = base / "notes" / "Allgemein.txt"
+            backup_dir = base / "backups"
+            note_path.parent.mkdir()
+            note_path.write_text("old", encoding="utf-8")
+
+            with patch("mindpic.persistence.get_topic_path", return_value=note_path), \
+                 patch("mindpic.persistence.get_backups_dir", return_value=backup_dir), \
+                 patch("mindpic.settings.MAX_BACKUPS_PER_NOTE", 1):
+                save_content("new", topic="Allgemein")
+                save_content("newer", topic="Allgemein")
+
+            self.assertEqual(note_path.read_text(encoding="utf-8"), "newer")
+            backups = list(backup_dir.glob("Allgemein_*.txt"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_text(encoding="utf-8"), "new")
+
+
 class HotkeyToggleTests(unittest.TestCase):
     def make_app(self):
         app = MindPicApp.__new__(MindPicApp)
         app.root = Mock()
         app._visible = True
         app._last_hotkey_toggle_ts = 0.0
+        app._autohide_job = None
         return app
 
     @patch("mindpic.app.time.time", side_effect=[100.0, 100.05])

@@ -17,6 +17,7 @@ from typing import Any
 
 from . import settings
 from .paths import ensure_dir, get_config_path
+from .persistence import atomic_write_json
 
 logger = logging.getLogger(__name__)
 
@@ -76,10 +77,7 @@ def save_config(config: dict[str, Any]) -> None:
             if k in config:
                 out[k] = config[k]
 
-        cfg_path.write_text(
-            json.dumps(out, ensure_ascii=False, indent=2, sort_keys=True),
-            encoding="utf-8",
-        )
+        atomic_write_json(cfg_path, out)
         logger.debug(f"Saved config to {cfg_path}")
     except (OSError, IOError) as e:
         logger.error(f"Failed to save config to {cfg_path}: {e}")

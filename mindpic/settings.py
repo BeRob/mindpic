@@ -64,8 +64,15 @@ DEFAULT_NOTE_COLORS: list[str] = [
     "#1f2b2b",
 ]
 
-# Autosave
+# Autosave / Daten-Sicherheit
 AUTOSAVE_INTERVAL_MS: int = 1500  # Inhalt/State regelmäßig speichern
+BACKUP_DIR_NAME: str = "backups"
+NOTES_DIR_NAME: str = "notes"
+MAX_BACKUPS_PER_NOTE: int = 20
+
+# Themen/Tabs
+DEFAULT_ACTIVE_TOPIC: str = "Allgemein"
+DEFAULT_TOPICS: list[str] = [DEFAULT_ACTIVE_TOPIC]
 
 # Hotkeys
 ENABLE_GLOBAL_HOTKEYS: bool = True  # Global hotkeys aktivieren/deaktivieren
@@ -131,6 +138,8 @@ DEFAULT_CONFIG: dict = {
     "font_size": DEFAULT_FONT_SIZE,
     "note_colors": DEFAULT_NOTE_COLORS,
     "auto_hide_on_focus": DEFAULT_AUTO_HIDE_ON_FOCUS_LOST,
+    "topics": DEFAULT_TOPICS,
+    "active_topic": DEFAULT_ACTIVE_TOPIC,
 }
 
 # =============================================================================

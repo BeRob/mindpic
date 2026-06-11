@@ -34,6 +34,13 @@ jobs:
           python -m unittest discover -s tests -v
           python -m compileall -q mindpic
 
+      - name: Read version
+        id: version
+        shell: pwsh
+        run: |
+          $v = python -c "import mindpic; print(mindpic.__version__)"
+          "version=$v" >> $env:GITHUB_OUTPUT
+
       - name: Build portable executable
         shell: pwsh
         working-directory: mindpic
@@ -43,6 +50,6 @@ jobs:
       - name: Upload portable artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MindPic-windows-portable
+          name: MindPic-windows-portable-${{ steps.version.outputs.version }}-${{ github.sha }}
           path: mindpic/dist/MindPic/**
           if-no-files-found: error

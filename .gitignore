@@ -11,10 +11,15 @@ venv/
 ENV/
 env/
 
-# PyInstaller
+# PyInstaller / build outputs
 build/
 dist/
+mindpic/build/
+mindpic/dist/
 *.spec
+!mindpic/MindPic.spec
+artifacts/
+*.zip
 
 # IDE
 .vscode/

@@ -114,3 +114,13 @@ def get_geometry_path() -> Path:
 @lru_cache(maxsize=None)
 def get_log_path() -> Path:
     return (get_data_dir() / settings.LOG_FILE_NAME).resolve()
+
+
+@lru_cache(maxsize=None)
+def get_notes_dir() -> Path:
+    return (get_data_dir() / settings.NOTES_DIR_NAME).resolve()
+
+
+@lru_cache(maxsize=None)
+def get_backups_dir() -> Path:
+    return (get_data_dir() / settings.BACKUP_DIR_NAME).resolve()

@@ -48,6 +48,11 @@ class UIRefs:
     text: tk.Text
     scrollbar: ttk.Scrollbar
     save_button: ttk.Button
+    timestamp_button: ttk.Button
+    status_label: ttk.Label
+    notebook: ttk.Notebook
+    texts: dict[str, tk.Text]
+    scrollbars: dict[str, ttk.Scrollbar]
 
     # context menu
     menu: tk.Menu | None = None
@@ -94,6 +99,7 @@ def setup_styles(root: tk.Tk, config: dict) -> ttk.Style:
         borderwidth=0,
         focusthickness=0,
     )
+    style.configure("Toolbar.TLabel", background=bg, foreground=fg)
     style.map(
         "Toolbar.TButton",
         background=[
@@ -146,47 +152,48 @@ def apply_app_icon(root: tk.Tk) -> tk.PhotoImage | None:
 # Widget creation / appearance
 # =============================================================================
 
-def create_widgets(root: tk.Tk, config: dict, on_save_clicked: Callable[[], None]) -> UIRefs:
+def create_widgets(
+    root: tk.Tk,
+    config: dict,
+    on_save_clicked: Callable[[], None],
+    on_timestamp_clicked: Callable[[], None] | None = None,
+) -> UIRefs:
     """
     Baut das Hauptlayout:
-    - Text (mit Scrollbar)
-    - unten rechts ein "Save"-Button
+    - Themen-Tabs mit Textfeldern
+    - unten Statuszeile, Speichern und Zeitstempel
     """
     main_frame = ttk.Frame(root, padding=settings.UI_MAIN_PADDING, style="TFrame")
     main_frame.pack(fill="both", expand=True)
 
-    text_container = ttk.Frame(main_frame, style="TFrame")
-    text_container.pack(side="top", fill="both", expand=True)
+    notebook = ttk.Notebook(main_frame)
+    notebook.pack(side="top", fill="both", expand=True)
 
-    text = tk.Text(
-        text_container,
-        wrap="word",
-        undo=True,
-        height=10,
-        bd=0,
-        highlightthickness=0,
-    )
-    text.pack(side="left", fill="both", expand=True)
-
-    scrollbar = ttk.Scrollbar(
-        text_container,
-        orient="vertical",
-        command=text.yview,
-        style="Custom.Vertical.TScrollbar",
-    )
-    scrollbar.pack(side="right", fill="y")
-    text.configure(yscrollcommand=scrollbar.set)
+    text, scrollbar = add_topic_tab(notebook, settings.DEFAULT_ACTIVE_TOPIC, config)
+    texts = {settings.DEFAULT_ACTIVE_TOPIC: text}
+    scrollbars = {settings.DEFAULT_ACTIVE_TOPIC: scrollbar}
 
     button_frame = ttk.Frame(main_frame, style="Toolbar.TFrame")
     button_frame.pack(side="bottom", fill="x", pady=(6, 0))
 
+    status_label = ttk.Label(button_frame, text="Bereit", style="Toolbar.TLabel")
+    status_label.pack(side="left")
+
     save_button = ttk.Button(
         button_frame,
-        text="Save",
+        text="Speichern",
         command=on_save_clicked,
         style="Toolbar.TButton",
     )
     save_button.pack(side="right")
+
+    timestamp_button = ttk.Button(
+        button_frame,
+        text="Zeitstempel",
+        command=on_timestamp_clicked or on_save_clicked,
+        style="Toolbar.TButton",
+    )
+    timestamp_button.pack(side="right", padx=(0, 6))
 
     # Resize-Grip (wird nur im Borderless-Mode eingeblendet)
     resize_grip = tk.Label(
@@ -207,9 +214,38 @@ def create_widgets(root: tk.Tk, config: dict, on_save_clicked: Callable[[], None
         text=text,
         scrollbar=scrollbar,
         save_button=save_button,
+        timestamp_button=timestamp_button,
+        status_label=status_label,
+        notebook=notebook,
+        texts=texts,
+        scrollbars=scrollbars,
         resize_grip=resize_grip,
     )
     return ui
+
+def add_topic_tab(notebook: ttk.Notebook, topic: str, config: dict) -> tuple[tk.Text, ttk.Scrollbar]:
+    """Create one topic tab and return its text widget and scrollbar."""
+    tab = ttk.Frame(notebook, style="TFrame")
+    text = tk.Text(
+        tab,
+        wrap="word",
+        undo=True,
+        height=10,
+        bd=0,
+        highlightthickness=0,
+    )
+    text.pack(side="left", fill="both", expand=True)
+    scrollbar = ttk.Scrollbar(
+        tab,
+        orient="vertical",
+        command=text.yview,
+        style="Custom.Vertical.TScrollbar",
+    )
+    scrollbar.pack(side="right", fill="y")
+    text.configure(yscrollcommand=scrollbar.set)
+    notebook.add(tab, text=topic)
+    return text, scrollbar
+
 
 def apply_colors(ui: UIRefs, config: dict) -> None:
     """
@@ -220,18 +256,20 @@ def apply_colors(ui: UIRefs, config: dict) -> None:
     bg = str(config.get("text_bg", "#111111"))
     note_colors = list(config.get("note_colors", []))
 
-    ui.text.configure(
-        fg=fg,
-        bg=bg,
-        insertbackground=fg,
-    )
-    for i, color in enumerate(note_colors):
-        ui.text.tag_configure(f"note{i}", background=str(color))
+    for text in ui.texts.values():
+        text.configure(
+            fg=fg,
+            bg=bg,
+            insertbackground=fg,
+        )
+        for i, color in enumerate(note_colors):
+            text.tag_configure(f"note{i}", background=str(color))
 
 def apply_font(ui: UIRefs, config: dict) -> None:
     fam = str(config.get("font_family", "Segoe UI"))
     size = int(config.get("font_size", 10))
-    ui.text.configure(font=(fam, size))
+    for text in ui.texts.values():
+        text.configure(font=(fam, size))
 
 # =============================================================================
 # Borderless drag helper
@@ -355,6 +393,10 @@ class MenuCallbacks:
     set_font: Callable[[str, int], None]           # family, size
 
     open_manual: Callable[[], None]
+    add_topic: Callable[[], None]
+    find_text: Callable[[], None]
+    open_data_dir: Callable[[], None]
+    open_log: Callable[[], None]
     quit_app: Callable[[], None]
 
 def create_context_menu(
@@ -486,7 +528,11 @@ def create_context_menu(
     menu.add_command(label="Immer im Vordergrund umschalten", command=callbacks.toggle_topmost)
     menu.add_command(label="Fenster ein-/ausblenden", command=callbacks.toggle_visibility)
 
-    # Manual / Quit
+    # Manual / data / topic helpers
+    menu.add_command(label="Neues Thema…", command=callbacks.add_topic)
+    menu.add_command(label="Suchen…", command=callbacks.find_text)
+    menu.add_command(label="Datenordner öffnen", command=callbacks.open_data_dir)
+    menu.add_command(label="Log öffnen", command=callbacks.open_log)
     menu.add_command(label="Handbuch öffnen", command=callbacks.open_manual)
     menu.add_separator()
     menu.add_command(label="Beenden", command=callbacks.quit_app)

@@ -23,11 +23,13 @@ from pathlib import Path
 from typing import Optional
 
 import tkinter as tk
+from tkinter import simpledialog
 
 from . import settings
 from .config_io import load_config, save_config
 from .persistence import load_content, save_content, load_window_geometry, save_window_geometry, WindowGeometry
-from .paths import get_log_path, get_manual_path
+from .paths import get_data_dir, get_log_path, get_manual_path
+from .note_store import ensure_topics, normalize_topic_name, unique_topic_name
 from .colorize import iter_blocks, pick_color_index, generate_timestamp
 from .hotkeys import HotkeyManager
 from .tray import TrayCallbacks, TrayController
@@ -54,6 +56,13 @@ class MindPicApp:
         self._autohide_job: Optional[str] = None
         self._config_save_job: Optional[str] = None
         self._last_hotkey_toggle_ts = 0.0
+        self._topics = ensure_topics(self.config.get("topics"))
+        self._current_topic = normalize_topic_name(str(self.config.get("active_topic", self._topics[0])))
+        if self._current_topic not in self._topics:
+            self._current_topic = self._topics[0]
+        self.config["topics"] = self._topics
+        self.config["active_topic"] = self._current_topic
+        self._last_saved_at: float | None = None
 
         # helpers
         self._dragger = ui_mod.BorderlessDragger()
@@ -71,7 +80,12 @@ class MindPicApp:
         # icon + styles + widgets
         ui_mod.setup_styles(self.root, self.config)
         self._icon_ref = ui_mod.apply_app_icon(self.root)
-        self.ui = ui_mod.create_widgets(self.root, self.config, on_save_clicked=self.save_with_timestamp)
+        self.ui = ui_mod.create_widgets(
+            self.root,
+            self.config,
+            on_save_clicked=lambda: self.save_current_state(recolorize=False),
+            on_timestamp_clicked=self.save_with_timestamp,
+        )
 
         ui_mod.apply_colors(self.ui, self.config)
         ui_mod.apply_font(self.ui, self.config)
@@ -92,13 +106,19 @@ class MindPicApp:
             resizer=self._resizer,
         )
 
-        # load content into Text
-        self.ui.text.insert("1.0", load_content())
+        # load topic content into Text widgets
+        self._setup_topic_tabs()
         self._recolorize()
 
         # binds
-        self.ui.text.bind("<<Modified>>", self._on_text_modified)
-        self.ui.text.bind("<KeyRelease>", lambda _e: self._recolorize_debounced())
+        self._bind_text_widget(self.ui.text)
+        for text in self.ui.texts.values():
+            if text is not self.ui.text:
+                self._bind_text_widget(text)
+        self.ui.notebook.bind("<<NotebookTabChanged>>", self._on_tab_changed)
+        self.root.bind("<Control-s>", lambda _e: self._return_break(self.save_current_state))
+        self.root.bind("<Control-f>", self.find_text)
+        self.root.bind("<Control-n>", self.add_topic_from_dialog)
         self.root.bind(settings.LOCAL_TOGGLE_KEY, self.toggle_visibility_from_hotkey)
 
         self.root.bind("<FocusOut>", self._on_focus_out)
@@ -121,6 +141,10 @@ class MindPicApp:
                 change_note_color=self._menu_set_note_color,
                 set_font=self._menu_set_font,
                 open_manual=self.open_manual,
+                add_topic=lambda: (self.add_topic_from_dialog(), None)[1],
+                find_text=lambda: (self.find_text(), None)[1],
+                open_data_dir=self.open_data_dir,
+                open_log=self.open_log,
                 quit_app=self.quit_app,
             ),
         )
@@ -146,6 +170,7 @@ class MindPicApp:
     # -------------------------------------------------------------------------
 
     def toggle_visibility(self) -> None:
+        self._cancel_autohide()
         if self._visible:
             self.root.withdraw()
             self._visible = False
@@ -191,12 +216,25 @@ class MindPicApp:
         den Save-Button.
         """
         text = self.ui.text.get("1.0", "end-1c")
-        save_content(text)
+        save_content(text, topic=self._current_topic)
+        self.config["topics"] = self._topics
+        self.config["active_topic"] = self._current_topic
         save_config(self.config)
         self._save_geometry()
+        self._mark_saved()
 
         if recolorize:
             self._recolorize()
+
+    def save_all_topics(self) -> None:
+        for topic in self._topics:
+            text = self.ui.texts[topic].get("1.0", "end-1c")
+            save_content(text, topic=topic)
+        self.config["topics"] = self._topics
+        self.config["active_topic"] = self._current_topic
+        save_config(self.config)
+        self._save_geometry()
+        self._mark_saved()
 
     def save_with_timestamp(self) -> None:
         """
@@ -210,6 +248,122 @@ class MindPicApp:
         Kompatibilitätsalias für ältere Callbacks: entspricht dem Save-Button.
         """
         self.save_with_timestamp()
+
+    def _return_break(self, fn) -> str:
+        fn()
+        return "break"
+
+    def _setup_topic_tabs(self) -> None:
+        # Initial tab exists from ui.create_widgets. Rename/reuse it for the first topic.
+        first = self._topics[0]
+        first_tab = self.ui.notebook.tabs()[0]
+        self.ui.notebook.tab(first_tab, text=first)
+        first_text = self.ui.text
+        self.ui.texts = {first: first_text}
+        self.ui.scrollbars = {first: self.ui.scrollbar}
+
+        for topic in self._topics[1:]:
+            text, scrollbar = ui_mod.add_topic_tab(self.ui.notebook, topic, self.config)
+            self.ui.texts[topic] = text
+            self.ui.scrollbars[topic] = scrollbar
+            ui_mod.apply_colors(self.ui, self.config)
+            ui_mod.apply_font(self.ui, self.config)
+
+        for topic, text in self.ui.texts.items():
+            text.delete("1.0", "end")
+            text.insert("1.0", load_content(topic))
+
+        if self._current_topic in self.ui.texts:
+            self.ui.notebook.select(self._tab_id_for_topic(self._current_topic))
+            self.ui.text = self.ui.texts[self._current_topic]
+        self._mark_saved("Bereit")
+
+    def _bind_text_widget(self, text: tk.Text) -> None:
+        text.bind("<<Modified>>", self._on_text_modified)
+        text.bind("<KeyRelease>", lambda _e: self._recolorize_debounced())
+
+    def _tab_id_for_topic(self, topic: str) -> str:
+        idx = self._topics.index(topic)
+        return self.ui.notebook.tabs()[idx]
+
+    def _on_tab_changed(self, _event=None) -> None:
+        try:
+            self.save_current_state(recolorize=False)
+        except Exception as e:
+            logger.error("Failed to save before tab switch: %s", e)
+        selected = self.ui.notebook.select()
+        idx = self.ui.notebook.tabs().index(selected)
+        self._current_topic = self._topics[idx]
+        self.ui.text = self.ui.texts[self._current_topic]
+        self.config["active_topic"] = self._current_topic
+        self._mark_saved(f"Thema: {self._current_topic}")
+        self._recolorize()
+
+    def add_topic_from_dialog(self, _event=None) -> str:
+        name = simpledialog.askstring("Neues Thema", "Name des Themas:", parent=self.root)
+        if not name:
+            return "break"
+        topic = unique_topic_name(name, self._topics)
+        self._topics.append(topic)
+        text, scrollbar = ui_mod.add_topic_tab(self.ui.notebook, topic, self.config)
+        self.ui.texts[topic] = text
+        self.ui.scrollbars[topic] = scrollbar
+        self._bind_text_widget(text)
+        ui_mod.apply_colors(self.ui, self.config)
+        ui_mod.apply_font(self.ui, self.config)
+        self.ui.notebook.select(self._tab_id_for_topic(topic))
+        self.config["topics"] = self._topics
+        self._schedule_config_save()
+        self._mark_saved(f"Thema angelegt: {topic}")
+        return "break"
+
+    def _mark_saved(self, message: str | None = None) -> None:
+        self._last_saved_at = time.time()
+        label = message or time.strftime("Gespeichert: %H:%M")
+        try:
+            self.ui.status_label.configure(text=label)
+        except Exception:
+            pass
+
+    def find_text(self, _event=None) -> str:
+        needle = simpledialog.askstring("Suchen", "Suchtext:", parent=self.root)
+        if not needle:
+            return "break"
+        text = self.ui.text
+        text.tag_remove("search", "1.0", "end")
+        start = text.search(needle, "insert", stopindex="end", nocase=True)
+        if not start:
+            start = text.search(needle, "1.0", stopindex="end", nocase=True)
+        if start:
+            end = f"{start}+{len(needle)}c"
+            text.tag_add("search", start, end)
+            text.tag_configure("search", background="#665500")
+            text.mark_set("insert", end)
+            text.see(start)
+            self._mark_saved(f"Treffer: {needle}")
+        else:
+            self._mark_saved(f"Nicht gefunden: {needle}")
+        return "break"
+
+    def open_data_dir(self) -> None:
+        p = get_data_dir()
+        try:
+            if sys.platform.startswith("win"):
+                os.startfile(str(p))  # type: ignore[attr-defined]
+            else:
+                webbrowser.open(p.as_uri())
+        except Exception as e:
+            logger.error("Failed to open data dir %s: %s", p, e)
+
+    def open_log(self) -> None:
+        p = get_log_path()
+        try:
+            if sys.platform.startswith("win"):
+                os.startfile(str(p))  # type: ignore[attr-defined]
+            else:
+                webbrowser.open(p.as_uri())
+        except Exception as e:
+            logger.error("Failed to open log %s: %s", p, e)
 
     def open_manual(self) -> None:
         p = get_manual_path()
@@ -236,7 +390,7 @@ class MindPicApp:
         logger.info("Shutting down MindPicApp")
         # save before exit
         try:
-            self.save_current_state()
+            self.save_all_topics()
         except Exception as e:
             logger.error(f"Failed to save on exit: {e}")
 
@@ -447,6 +601,10 @@ class MindPicApp:
         except Exception:
             pass
         self._last_user_edit_ts = time.time()
+        try:
+            self.ui.status_label.configure(text="Ungespeicherte Änderung…")
+        except Exception:
+            pass
 
     def _on_focus_out(self, _event=None) -> None:
         if not bool(self.config.get("auto_hide_on_focus", False)):
