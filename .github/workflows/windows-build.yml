@@ -1,0 +1,48 @@
+name: Build Windows executable
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'mindpic/**'
+      - 'tests/**'
+      - '.github/workflows/windows-build.yml'
+      - 'README.md'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r mindpic/requirements.txt pyinstaller
+
+      - name: Run tests
+        shell: pwsh
+        run: |
+          python -m unittest discover -s tests -v
+          python -m compileall -q mindpic
+
+      - name: Build portable executable
+        shell: pwsh
+        working-directory: mindpic
+        run: |
+          pyinstaller --clean --noconfirm MindPic.spec
+
+      - name: Upload portable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MindPic-windows-portable
+          path: mindpic/dist/MindPic/**
+          if-no-files-found: error
