@@ -53,6 +53,7 @@ class MindPicApp:
         self._autosave_job: Optional[str] = None
         self._autohide_job: Optional[str] = None
         self._config_save_job: Optional[str] = None
+        self._last_hotkey_toggle_ts = 0.0
 
         # helpers
         self._dragger = ui_mod.BorderlessDragger()
@@ -98,7 +99,7 @@ class MindPicApp:
         # binds
         self.ui.text.bind("<<Modified>>", self._on_text_modified)
         self.ui.text.bind("<KeyRelease>", lambda _e: self._recolorize_debounced())
-        self.root.bind(settings.LOCAL_TOGGLE_KEY, lambda _e: self.toggle_visibility())
+        self.root.bind(settings.LOCAL_TOGGLE_KEY, self.toggle_visibility_from_hotkey)
 
         self.root.bind("<FocusOut>", self._on_focus_out)
         self.root.bind("<FocusIn>", self._on_focus_in)
@@ -131,7 +132,7 @@ class MindPicApp:
         # global hotkey (optional)
         self._hotkeys.register_global_hotkey(
             settings.GLOBAL_TOGGLE_HOTKEY,
-            lambda: self._call_on_ui_thread(self.toggle_visibility),
+            lambda: self._call_on_ui_thread(self.toggle_visibility_from_hotkey),
         )
 
         # autosave timer
@@ -156,6 +157,24 @@ class MindPicApp:
             except Exception:
                 pass
             self._visible = True
+
+    def toggle_visibility_from_hotkey(self, _event=None) -> str:
+        """
+        Toggle handler for F9.
+
+        F9 can arrive twice on Windows when the app is focused: once through the
+        local Tk binding and once through the global keyboard hook. Without a
+        short debounce this hides and immediately re-shows the window, which
+        looks like F9 did nothing. Returning "break" also stops Tk propagation.
+        """
+        now = time.time()
+        if (now - self._last_hotkey_toggle_ts) < 0.25:
+            logger.debug("Ignoring duplicate F9 toggle event")
+            return "break"
+
+        self._last_hotkey_toggle_ts = now
+        self.toggle_visibility()
+        return "break"
 
     def toggle_topmost(self) -> None:
         new_val = not bool(self.config.get("always_on_top", settings.DEFAULT_ALWAYS_ON_TOP))

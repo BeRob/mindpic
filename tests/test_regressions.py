@@ -109,5 +109,38 @@ class BorderlessMenuTests(unittest.TestCase):
         app._schedule_config_save.assert_called_once()
 
 
+class HotkeyToggleTests(unittest.TestCase):
+    def make_app(self):
+        app = MindPicApp.__new__(MindPicApp)
+        app.root = Mock()
+        app._visible = True
+        app._last_hotkey_toggle_ts = 0.0
+        return app
+
+    @patch("mindpic.app.time.time", side_effect=[100.0, 100.05])
+    def test_duplicate_f9_events_are_debounced(self, _time):
+        app = self.make_app()
+
+        first = app.toggle_visibility_from_hotkey()
+        second = app.toggle_visibility_from_hotkey()
+
+        self.assertEqual(first, "break")
+        self.assertEqual(second, "break")
+        app.root.withdraw.assert_called_once()
+        app.root.deiconify.assert_not_called()
+        self.assertFalse(app._visible)
+
+    @patch("mindpic.app.time.time", side_effect=[100.0, 100.5])
+    def test_separate_f9_presses_still_toggle_back(self, _time):
+        app = self.make_app()
+
+        app.toggle_visibility_from_hotkey()
+        app.toggle_visibility_from_hotkey()
+
+        app.root.withdraw.assert_called_once()
+        app.root.deiconify.assert_called_once()
+        self.assertTrue(app._visible)
+
+
 if __name__ == "__main__":
     unittest.main()
