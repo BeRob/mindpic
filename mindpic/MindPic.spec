@@ -1,6 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 import os
+import sys
 
 # =============================================================================
 # USER CONFIG (hier anpassen)
@@ -21,16 +22,26 @@ ASSET_FILES = [
     ("mindpic_tray.png", "assets"),
     ("Mindpic_Manual.pdf", "assets"),
 ]
+
+# Some Python distributions (for example uv-managed CPython builds) keep Tcl/Tk
+# shared libraries next to the interpreter instead of in a system library path.
+# PyInstaller collects the Tcl/Tk data files automatically but can miss these
+# two shared libraries, which makes the bundled app fail at tkinter import time.
+TCL_TK_LIBS = [
+    os.path.join(sys.base_prefix, "lib", "libtcl9.0.so"),
+    os.path.join(sys.base_prefix, "lib", "libtcl9tk9.0.so"),
+]
 # =============================================================================
 
 block_cipher = None
 
 datas = [(os.path.join(ASSETS_DIR, fname), dest) for fname, dest in ASSET_FILES]
+binaries = [(os.path.abspath(path), ".") for path in TCL_TK_LIBS if os.path.exists(path)]
 
 a = Analysis(
     [ENTRY_SCRIPT],
     pathex=[PROJECT_DIR],
-    binaries=[],
+    binaries=binaries,
     datas=datas,
     hiddenimports=[],
     hookspath=[],
